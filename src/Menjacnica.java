@@ -1,5 +1,6 @@
 import java.awt.EventQueue;
-import java.io.IOException;
+import java.io.*;
+import java.text.SimpleDateFormat;
 import java.util.LinkedList;
 import java.util.Map;
 
@@ -13,12 +14,14 @@ import javax.swing.SwingConstants;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonPrimitive;
 
 import memnjacnica.util.URLConnectionUtil;
+import menjacnica.Konverzija;
 import menjacnica.Valuta;
 import menjacnica.Zemlja;
 
@@ -131,7 +134,10 @@ public class Menjacnica {
 						JOptionPane.showMessageDialog(frame, "Nema podataka za unete valute", "Greska", 
 								JOptionPane.ERROR_MESSAGE);
 					}
-					else konvertuj(valuta);
+					else {
+						konvertuj(valuta);
+						dodajKonverziju(valuta, "data/log.json");
+					}
 				} catch (IOException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
@@ -180,6 +186,47 @@ public class Menjacnica {
 		}catch (NumberFormatException e) {
 			JOptionPane.showMessageDialog(frame, "Morate uneti broj!", 
 					"Greska", JOptionPane.ERROR_MESSAGE);
+		}
+	}
+	
+
+	private LinkedList<Konverzija> istorijaKonverzija(String fajl){
+		LinkedList<Konverzija> pomLista = new LinkedList<Konverzija>();
+		try {
+			FileReader in = new FileReader(fajl);
+			Gson gson = new GsonBuilder().setPrettyPrinting().create();
+			JsonArray jsonArray = gson.fromJson(in, JsonArray.class);
+			
+			for (int i = 0; i < jsonArray.size(); i++) {
+				pomLista.add(gson.fromJson(jsonArray.get(i), Konverzija.class));
+			}
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		}
+		return pomLista;
+	}
+	
+	private void dodajKonverziju(Valuta valuta, String fajl) {
+		LinkedList<Konverzija> konverzije = istorijaKonverzija(fajl);
+		Konverzija k = new Konverzija();
+		k.setDatumVreme(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSSSSS"));
+		k.setIzValuta(valuta.getFr());
+		k.setuValuta(valuta.getTo());
+		k.setKurs(Double.parseDouble(valuta.getVal()));
+		
+		if(konverzije == null)
+			konverzije = new LinkedList<Konverzija>();
+		
+		konverzije.add(k);
+		
+		try {
+			FileWriter out = new FileWriter(fajl);
+			Gson gson = new GsonBuilder().setPrettyPrinting().create();
+			gson.toJson(konverzije, out);
+			out.close();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
 	}
 }
