@@ -5,6 +5,8 @@ import java.util.Map;
 
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+
 import java.awt.BorderLayout;
 import javax.swing.JPanel;
 import javax.swing.SwingConstants;
@@ -17,12 +19,15 @@ import com.google.gson.JsonParser;
 import com.google.gson.JsonPrimitive;
 
 import memnjacnica.util.URLConnectionUtil;
+import menjacnica.Valuta;
 import menjacnica.Zemlja;
 
 import javax.swing.JComboBox;
 import javax.swing.JTextField;
 import javax.swing.JButton;
 import javax.swing.DefaultComboBoxModel;
+import java.awt.event.ActionListener;
+import java.awt.event.ActionEvent;
 
 public class Menjacnica {
 
@@ -31,6 +36,8 @@ public class Menjacnica {
 	private JTextField textField_1;
 	private LinkedList<Zemlja> zemlje = new LinkedList<Zemlja>();
 	private String[] countries = countries();
+	JComboBox comboBox;
+	JComboBox comboBox_1;
 
 	/**
 	 * Launch the application.
@@ -76,12 +83,12 @@ public class Menjacnica {
 		lblNewLabel_1.setBounds(270, 42, 77, 14);
 		panel.add(lblNewLabel_1);
 		
-		JComboBox comboBox = new JComboBox();
+		comboBox = new JComboBox();
 		comboBox.setModel(new DefaultComboBoxModel(countries));
 		comboBox.setBounds(40, 78, 136, 20);
 		panel.add(comboBox);
 		
-		JComboBox comboBox_1 = new JComboBox();
+		comboBox_1 = new JComboBox();
 		comboBox_1.setModel(new DefaultComboBoxModel(countries));
 		comboBox_1.setBounds(234, 78, 136, 20);
 		panel.add(comboBox_1);
@@ -105,6 +112,32 @@ public class Menjacnica {
 		textField_1.setColumns(10);
 		
 		JButton btnKonvertuj = new JButton("Konvertuj");
+		btnKonvertuj.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent arg0) {
+				String url = "http://free.currencyconverterapi.com/api/v3/convert?q=";
+				String zahtevURL = skracenica(comboBox.getSelectedItem().toString())+"_" 
+									+ skracenica(comboBox_1.getSelectedItem().toString());
+				url += zahtevURL;
+				try {
+					String content = URLConnectionUtil.getContent(url);
+					JsonParser jsonParser = new JsonParser();
+					JsonObject jsonObj = jsonParser.parse(content).getAsJsonObject().
+							getAsJsonObject("results").getAsJsonObject(zahtevURL);
+					
+					Gson gson = new GsonBuilder().create();
+					Valuta valuta = gson.fromJson(jsonObj, Valuta.class);
+					
+					if (valuta == null) {
+						JOptionPane.showMessageDialog(frame, "Nema podataka za unete valute", "Greska", 
+								JOptionPane.ERROR_MESSAGE);
+					}
+					else konvertuj(valuta);
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+		});
 		btnKonvertuj.setBounds(162, 215, 89, 23);
 		panel.add(btnKonvertuj);
 		
@@ -126,9 +159,27 @@ public class Menjacnica {
 				naziviZemalja[i] = zemlje.get(i).getName();
 			return naziviZemalja;	
 		} catch (IOException e) {
-			// TODO Auto-generated catch bloc	k
+			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		return null;
+	}
+	
+	private String skracenica(String drzava) {
+		for (int i = 0; i < zemlje.size(); i++)
+			if (zemlje.get(i).getName().equals(drzava))
+				return zemlje.get(i).getCurrencyId();
+		return null;
+	}
+	
+	private void konvertuj(Valuta valuta) {
+		try {
+			double iznos =Double.parseDouble(textField.getText())* Double.parseDouble(valuta.getVal());
+			String tekst = "" + iznos;
+			textField_1.setText(tekst);
+		}catch (NumberFormatException e) {
+			JOptionPane.showMessageDialog(frame, "Morate uneti broj!", 
+					"Greska", JOptionPane.ERROR_MESSAGE);
+		}
 	}
 }
